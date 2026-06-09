@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日热量追踪</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: sans-serif;
+    max-width: 520px;
+    margin: 40px auto;
+    background: #f5f4f0;
+    color: #1a1a1a;
+    padding: 0 1rem 4rem;
+  }
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
+  h2 { font-size: 14px; font-weight: 500; color: #555; margin: 1.5rem 0 10px; }
+
+  .progress-wrap {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #e0e0e0;
+    padding: 16px;
+    margin-bottom: 1.5rem;
+  }
+  .progress-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 10px;
+  }
+  .progress-top b { color: #1a1a1a; font-size: 18px; }
+  .track {
+    background: #f0efe9;
+    border-radius: 999px;
+    height: 12px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #1a1a1a;
+    transition: width 0.4s;
+  }
+  .fill.warning { background: #ef9f27; }
+  .fill.danger { background: #e24b4a; }
+  .progress-bottom {
+    font-size: 13px;
+    color: #888;
+    text-align: right;
+  }
+  .progress-bottom b { color: #1a1a1a; }
+
+  .input-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #e0e0e0;
+    padding: 16px;
+    margin-bottom: 1.5rem;
+  }
+  .meal-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .tab {
+    flex: 1;
+    padding: 6px;
+    font-size: 12px;
+    border-radius: 8px;
+    border: 0.5px solid #e0e0e0;
+    background: #f5f4f0;
+    color: #888;
+    cursor: pointer;
+    text-align: center;
+  }
+  .tab.active {
+    background: #1a1a1a;
+    color: #fff;
+    border-color: #1a1a1a;
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  input[type="text"], input[type="number"] {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 0.5px solid #ccc;
+    font-size: 13px;
+    background: #fff;
+    width: 100%;
+  }
+  .suggestions {
+    position: absolute;
+    top: 38px;
+    left: 0;
+    right: 80px;
+    background: #fff;
+    border: 0.5px solid #ccc;
+    border-radius: 8px;
+    z-index: 10;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .suggestion-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 0.5px solid #f0f0f0;
+  }
+  .suggestion-item:hover { background: #f5f4f0; }
+  .suggestion-item .hint { font-size: 11px; color: #aaa; margin-left: 6px; }
+  .gram-input { width: 80px; flex-shrink: 0; }
+  .add-btn {
+    width: 100%;
+    padding: 9px;
+    border-radius: 8px;
+    border: 0.5px solid #ccc;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .add-btn:hover { background: #333; }
+
+  .log-list { margin-bottom: 1.5rem; }
+  .log-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    border-radius: 10px;
+    border: 0.5px solid #e0e0e0;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .log-left .meal-tag {
+    font-size: 11px;
+    color: #aaa;
+    margin-bottom: 2px;
+  }
+  .log-left .food-name { font-weight: 500; }
+  .log-right { display: flex; align-items: center; gap: 10px; }
+  .log-kcal { font-size: 13px; color: #555; }
+  .del { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 0; }
+  .del:hover { color: #e24b4a; }
+
+  .recommend-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #e0e0e0;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .recommend-card .r-label {
+    font-size: 11px;
+    color: #aaa;
+    margin-bottom: 4px;
+  }
+  .recommend-card .r-name { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .recommend-card .r-desc { font-size: 12px; color: #888; line-height: 1.5; }
+  .recommend-card .r-kcal {
+    font-size: 12px;
+    color: #555;
+    background: #f5f4f0;
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-top: 6px;
+  }
+  .nutrition-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .n-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f0efe9;
+    color: #666;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #bbb;
+    font-size: 13px;
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #e0e0e0;
+  }
+  .divider { height: 0.5px; background: #e0e0e0; margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+
+<h1>今日热量追踪</h1>
+<p class="sub">目标 1200 kcal · 记录饮食，获取推荐</p>
+
+<div class="progress-wrap">
+  <div class="progress-top">
+    <span>已摄入 <b id="consumed">0</b> kcal</span>
+    <span>剩余 <b id="remaining">1200</b> kcal</span>
+  </div>
+  <div class="track"><div class="fill" id="fill" style="width:0%"></div></div>
+  <div class="progress-bottom">目标 <b>1200 kcal</b></div>
+</div>
+
+<h2>记录饮食</h2>
+<div class="input-card">
+  <div class="meal-tabs">
+    <div class="tab active" onclick="setMeal('早餐',this)">早餐</div>
+    <div class="tab" onclick="setMeal('午餐',this)">午餐</div>
+    <div class="tab" onclick="setMeal('晚餐',this)">晚餐</div>
+    <div class="tab" onclick="setMeal('加餐',this)">加餐</div>
+  </div>
+  <div class="input-row">
+    <input type="text" id="food-input" placeholder="输入食物名称，如：鸡胸肉" oninput="suggest()" autocomplete="off">
+    <input type="number" id="gram-input" class="gram-input" placeholder="克数">
+    <div class="suggestions" id="suggestions" style="display:none"></div>
+  </div>
+  <div style="font-size:12px; color:#aaa; margin-bottom:10px;" id="kcal-preview"></div>
+  <button class="add-btn" onclick="addFood()">+ 添加</button>
+</div>
+
+<div class="log-list" id="log-list">
+  <div class="empty-state">还没有记录，输入今天吃了什么</div>
+</div>
+
+<div class="divider"></div>
+
+<h2 id="rec-title">推荐食谱</h2>
+<div id="recommendations">
+  <div class="empty-state">记录饮食后，这里会根据剩余热量推荐食谱</div>
+</div>
+
+<script>
+  const TARGET = 1200;
+  let currentMeal = '早餐';
+  let log = [];
+
+  const foodDB = {
+    '鸡胸肉': { kcal: 133, protein: true, fat: false, carb: false },
+    '鸡蛋': { kcal: 144, protein: true, fat: true, carb: false },
+    '糙米饭': { kcal: 111, protein: false, fat: false, carb: true },
+    '白米饭': { kcal: 116, protein: false, fat: false, carb: true },
+    '燕麦': { kcal: 367, protein: true, fat: true, carb: true },
+    '全麦面包': { kcal: 246, protein: true, fat: false, carb: true },
+    '牛奶': { kcal: 54, protein: true, fat: true, carb: false },
+    '豆浆': { kcal: 33, protein: true, fat: false, carb: false },
+    '豆腐': { kcal: 76, protein: true, fat: true, carb: false },
+    '西蓝花': { kcal: 33, protein: false, fat: false, carb: true },
+    '菠菜': { kcal: 23, protein: false, fat: false, carb: true },
+    '番茄': { kcal: 19, protein: false, fat: false, carb: true },
+    '黄瓜': { kcal: 15, protein: false, fat: false, carb: true },
+    '苹果': { kcal: 52, protein: false, fat: false, carb: true },
+    '香蕉': { kcal: 89, protein: false, fat: false, carb: true },
+    '红薯': { kcal: 86, protein: false, fat: false, carb: true },
+    '鲈鱼': { kcal: 105, protein: true, fat: true, carb: false },
+    '虾仁': { kcal: 93, protein: true, fat: false, carb: false },
+    '三文鱼': { kcal: 208, protein: true, fat: true, carb: false },
+    '希腊酸奶': { kcal: 59, protein: true, fat: false, carb: false },
+    '坚果': { kcal: 607, protein: true, fat: true, carb: false },
+    '橄榄油': { kcal: 884, protein: false, fat: true, carb: false },
+    '面条': { kcal: 138, protein: false, fat: false, carb: true },
+    '猪肉': { kcal: 143, protein: true, fat: true, carb: false },
+    '牛肉': { kcal: 125, protein: true, fat: true, carb: false },
+  };
+
+  const recommendations = {
+    breakfast: [
+      { name: '燕麦粥 + 水煮蛋', kcal: 290, desc: '燕麦 50g + 鸡蛋 1 个 + 牛奶 150ml', tags: ['蛋白质', '碳水', '钙'] },
+      { name: '全麦吐司 + 希腊酸奶', kcal: 280, desc: '全麦吐司 2 片 + 希腊酸奶 100g', tags: ['蛋白质', '纤维'] },
+      { name: '蒸红薯 + 豆浆', kcal: 250, desc: '红薯 150g + 无糖豆浆 250ml', tags: ['碳水', '蛋白质'] },
+    ],
+    lunch: [
+      { name: '鸡胸肉沙拉饭', kcal: 420, desc: '糙米饭 100g + 鸡胸肉 100g + 蔬菜', tags: ['高蛋白', '低脂', '碳水'] },
+      { name: '清蒸鲈鱼 + 米饭', kcal: 400, desc: '鲈鱼 150g + 糙米饭 100g + 青菜', tags: ['蛋白质', 'Omega-3'] },
+      { name: '豆腐蔬菜盖饭', kcal: 360, desc: '豆腐 150g + 时蔬 + 糙米饭 100g', tags: ['植物蛋白', '低脂'] },
+      { name: '番茄鸡蛋面', kcal: 380, desc: '全麦面 80g + 番茄 1 个 + 鸡蛋 1 个', tags: ['碳水', '蛋白质', '维C'] },
+    ],
+    dinner: [
+      { name: '水煮鸡胸 + 蒸蔬菜', kcal: 260, desc: '鸡胸肉 100g + 西蓝花 + 胡萝卜', tags: ['高蛋白', '低卡', '维C'] },
+      { name: '虾仁炒时蔬', kcal: 280, desc: '虾仁 100g + 西蓝花 + 少油', tags: ['蛋白质', '低脂'] },
+      { name: '蔬菜豆腐汤', kcal: 200, desc: '嫩豆腐 100g + 时蔬 + 清汤', tags: ['低卡', '植物蛋白'] },
+      { name: '清蒸鱼 + 少量米饭', kcal: 320, desc: '鱼 120g + 糙米饭 50g + 青菜', tags: ['蛋白质', 'Omega-3'] },
+    ],
+    snack: [
+      { name: '苹果', kcal: 80, desc: '中等苹果 1 个约 150g', tags: ['纤维', '维C'] },
+      { name: '无糖酸奶', kcal: 70, desc: '低脂无糖酸奶 100g', tags: ['蛋白质', '钙'] },
+      { name: '坚果小包', kcal: 90, desc: '混合坚果 15g', tags: ['健康脂肪', '蛋白质'] },
+    ]
+  };
+
+  function setMeal(name, el) {
+    currentMeal = name;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function suggest() {
+    const val = document.getElementById('food-input').value.trim();
+    const gram = parseInt(document.getElementById('gram-input').value) || 100;
+    const box = document.getElementById('suggestions');
+    const preview = document.getElementById('kcal-preview');
+
+    if (foodDB[val]) {
+      const k = Math.round(foodDB[val].kcal * gram / 100);
+      preview.textContent = `约 ${k} kcal（每100g ${foodDB[val].kcal} kcal）`;
+    } else {
+      preview.textContent = '';
+    }
+
+    if (!val) { box.style.display = 'none'; return; }
+    const matches = Object.keys(foodDB).filter(k => k.includes(val));
+    if (!matches.length) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    box.innerHTML = matches.map(m => `
+      <div class="suggestion-item" onclick="selectFood('${m}')">
+        ${m}<span class="hint">${foodDB[m].kcal} kcal/100g</span>
+      </div>
+    `).join('');
+  }
+
+  function selectFood(name) {
+    document.getElementById('food-input').value = name;
+    document.getElementById('suggestions').style.display = 'none';
+    suggest();
+  }
+
+  document.getElementById('gram-input').addEventListener('input', suggest);
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.input-row')) {
+      document.getElementById('suggestions').style.display = 'none';
+    }
+  });
+
+  function addFood() {
+    const name = document.getElementById('food-input').value.trim();
+    const gram = parseInt(document.getElementById('gram-input').value);
+    if (!name || !gram) { alert('请输入食物名称和克数'); return; }
+
+    let kcal;
+    if (foodDB[name]) {
+      kcal = Math.round(foodDB[name].kcal * gram / 100);
+    } else {
+      const input = prompt(`"${name}" 不在数据库中，请手动输入每100g热量（kcal）：`);
+      if (!input) return;
+      kcal = Math.round(parseInt(input) * gram / 100);
+      foodDB[name] = { kcal: parseInt(input), protein: false, fat: false, carb: false };
+    }
+
+    log.push({ meal: currentMeal, name, gram, kcal });
+    document.getElementById('food-input').value = '';
+    document.getElementById('gram-input').value = '';
+    document.getElementById('kcal-preview').textContent = '';
+    render();
+  }
+
+  function deleteLog(i) {
+    log.splice(i, 1);
+    render();
+  }
+
+  function render() {
+    const total = log.reduce((s, i) => s + i.kcal, 0);
+    const remaining = TARGET - total;
+    const pct = Math.min(Math.round(total / TARGET * 100), 100);
+
+    document.getElementById('consumed').textContent = total;
+    document.getElementById('remaining').textContent = Math.max(remaining, 0);
+
+    const fill = document.getElementById('fill');
+    fill.style.width = pct + '%';
+    fill.className = 'fill' + (pct >= 100 ? ' danger' : pct >= 80 ? ' warning' : '');
+
+    if (!log.length) {
+      document.getElementById('log-list').innerHTML = '<div class="empty-state">还没有记录，输入今天吃了什么</div>';
+    } else {
+      document.getElementById('log-list').innerHTML = log.map((item, i) => `
+        <div class="log-item">
+          <div class="log-left">
+            <div class="meal-tag">${item.meal}</div>
+            <div class="food-name">${item.name} ${item.gram}g</div>
+          </div>
+          <div class="log-right">
+            <span class="log-kcal">${item.kcal} kcal</span>
+            <button class="del" onclick="deleteLog(${i})">✕</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    renderRecommend(remaining);
+  }
+
+  function renderRecommend(remaining) {
+    const title = document.getElementById('rec-title');
+    const box = document.getElementById('recommendations');
+
+    if (remaining <= 0) {
+      title.textContent = '今日热量已达标 🎉';
+      box.innerHTML = '<div class="empty-state">今天的热量目标已完成，注意不要超标哦！</div>';
+      return;
+    }
+
+    const meals = log.map(i => i.meal);
+    const hasBF = meals.includes('早餐');
+    const hasLunch = meals.includes('午餐');
+    const hasDinner = meals.includes('晚餐');
+
+    let recs = [];
+    if (!hasBF && remaining > 200) recs = recs.concat(recommendations.breakfast.filter(r => r.kcal <= remaining));
+    if (!hasLunch && remaining > 300) recs = recs.concat(recommendations.lunch.filter(r => r.kcal <= remaining));
+    if (!hasDinner && remaining > 200) recs = recs.concat(recommendations.dinner.filter(r => r.kcal <= remaining));
+    if (remaining < 150) recs = recs.concat(recommendations.snack.filter(r => r.kcal <= remaining));
+
+    if (!recs.length) {
+      title.textContent = `还剩 ${remaining} kcal`;
+      box.innerHTML = '<div class="empty-state">剩余热量较少，建议喝水或少量蔬菜补充</div>';
+      return;
+    }
+
+    recs = recs.slice(0, 4);
+    title.textContent = `还剩 ${remaining} kcal，推荐吃`;
+    box.innerHTML = recs.map(r => `
+      <div class="recommend-card">
+        <div class="r-label">${r.kcal} kcal</div>
+        <div class="r-name">${r.name}</div>
+        <div class="r-desc">${r.desc}</div>
+        <div class="nutrition-tags">${r.tags.map(t => `<span class="n-tag">${t}</span>`).join('')}</div>
+      </div>
+    `).join('');
+  }
+
+  render();
+</script>
+</body>
+</html>
